@@ -133,7 +133,7 @@ public class ProcessManager implements Consumer {
 	}
 	
 	protected void startProcess(String name, int instance, DataMap config) throws IOException {
-		System.out.println("Starting process " + name);
+		System.out.println("Starting process " + name + " instance " + instance);
 		String command = config.getString("command");
 		String rootDir = System.getProperty("user.dir");
 		String workDir = rootDir + "/work";

@@ -5,21 +5,24 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.bluerings.FileReceiverHandler.FileReceiverListener;
 import io.bluerings.FileWatcher.FileWatcherListener;
 import io.firebus.Payload;
 import io.firebus.StreamEndpoint;
 import io.firebus.exceptions.FunctionErrorException;
 import io.firebus.exceptions.FunctionTimeoutException;
 
-public class RepoManager implements FileWatcherListener {
+public class RepoManager implements FileWatcherListener, FileReceiverListener {
 
 	protected Agent agent;
 	protected List<String> localFiles;
+	protected List<String> receivingFiles;
 	protected FileWatcher fileWatcher;
 	
 	public RepoManager(Agent a) {
 		agent = a;
 		localFiles = new ArrayList<String>();
+		receivingFiles = new ArrayList<String>();
 	}
 	
 	public void initiate() throws FunctionErrorException, FunctionTimeoutException, IOException {
@@ -54,11 +57,15 @@ public class RepoManager implements FileWatcherListener {
 	}
 	
 	public void retrieveFile(String filename) {
-		System.out.println("Getting file " + filename);
 		try {
-			StreamEndpoint sep = agent.getFirebus().requestStream("repo_" + filename, new Payload(), 10000);
-			if(sep != null)
-				sep.setHandler(new FileReceiverHandler(filename));
+			if(!localFiles.contains(filename) && !receivingFiles.contains(filename)) {
+				System.out.println("Getting file " + filename);
+				StreamEndpoint sep = agent.getFirebus().requestStream("repo_" + filename, new Payload(), 10000);
+				if(sep != null) {
+					receivingFiles.add(filename);
+					sep.setHandler(new FileReceiverHandler(filename, this));
+				}
+			}
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -69,10 +76,20 @@ public class RepoManager implements FileWatcherListener {
 	}
 
 	public void fileCreated(File file) {
-		registerFile(file);
+		if(!receivingFiles.contains(file.getName()))
+			registerFile(file);
 	}
 
 	public void fileDeleted(File file) {
 		deregisterFile(file);
+	}
+
+	public void fileReceived(File file) {
+		receivingFiles.remove(file.getName());
+		registerFile(file);
+	}
+
+	public void fileReceiveFailed(File file) {
+		receivingFiles.remove(file.getName());
 	}
 }

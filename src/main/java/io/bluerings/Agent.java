@@ -22,10 +22,15 @@ public class Agent extends Thread {
 	protected static int OS_WINDOWS = 1;
 	protected static int OS_LINUX = 2;
 	
-	public Agent(String nt) {
+	public Agent(String nt, int fbp) {
 		nodeType = nt;
+		if(nodeType == null)
+			nodeType = "gen";
+		System.out.println("Starting Bluerings agent of type '" + nodeType + "'");
+		if(fbp != 0)
+			System.out.println("Firebus port set to " + fbp);
 		try {
-			firebus = new Firebus("bluerings", "blueringspasswd");
+			firebus = new Firebus(fbp, "bluerings", "blueringspasswd");
 			repoManager = new RepoManager(this);
 			processManager = new ProcessManager(this);
 			configManager = new ConfigManager(this);
@@ -61,6 +66,9 @@ public class Agent extends Thread {
 		agentId = inetAddress.getHostName();
 	}
 
+	public void addKnownAddress(String a, int p) {
+		firebus.addKnownNodeAddress(a, p);
+	}
 	
 	public DataMap getConfig() {
 		return configManager.getConfig();
@@ -92,14 +100,42 @@ public class Agent extends Thread {
 			FileHandler fh = new FileHandler("Agent.log");
 			fh.setFormatter(new FirebusSimpleFormatter());
 			fh.setLevel(Level.FINEST);
-			Logger logger = Logger.getLogger("io.firebus");
+			Logger logger = null;
+			logger = Logger.getLogger("io.bluerings");
 			logger.addHandler(fh);
 			logger.setLevel(Level.FINEST);
+			logger = Logger.getLogger("io.firebus");
+			logger.addHandler(fh);
+			logger.setLevel(Level.FINE);
 		}
 		catch(Exception e)
 		{
 			e.printStackTrace();
-		}		
-		new Agent(args[0]);
+		}
+		String nodeType = null;
+		int fbPort = 0;
+		String ka = null;
+		for(int i = 0; i < args.length; i++) {
+			String sw = args[i];
+			if(sw.equals("-nt") && args.length > i + 1) {
+				nodeType = args[i + 1];
+				i++;
+			} else if(sw.equals("-fbp") && args.length > i + 1) {
+				fbPort = Integer.parseInt(args[i + 1]);
+				i++;
+			} else if(sw.equals("-fbka") && args.length > i + 1) {
+				ka = args[i + 1];
+				i++;
+			}
+		}
+		if(nodeType == null) {
+			nodeType = System.getenv("BLUERINGS_NODETYPE");
+		}
+		Agent agent = new Agent(nodeType, fbPort);
+		if(ka != null) {
+			String[] parts = ka.split(":");
+			agent.addKnownAddress(parts[0], Integer.parseInt(parts[1]));
+		}
+		
 	}
 }
