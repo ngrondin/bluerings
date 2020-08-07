@@ -74,9 +74,12 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 	
 	public void fileModified(File file) {
 		if(file.getName().equals("config.json")) {
+			DataMap newConfig = null;
 			try {
-				DataMap newConfig = new DataMap(new FileInputStream(file));
-				if(!newConfig.toString().equals(config.toString())) {
+				newConfig = new DataMap(new FileInputStream(file));
+			} catch(Exception e) {}
+			try {
+				if(newConfig != null && !newConfig.toString().equals(config.toString())) {
 					System.out.println("Config updated locally, reloading and publishing it out");
 					config = newConfig;
 					agent.getFirebus().publish("config", new Payload(config.toString()));
@@ -84,6 +87,7 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 			} catch(Exception e) {
 				e.printStackTrace();
 			}
+			
 		}
 	}
 

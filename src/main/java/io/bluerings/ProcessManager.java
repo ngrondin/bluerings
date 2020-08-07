@@ -103,7 +103,8 @@ public class ProcessManager implements Consumer {
 			String name = it.next();
 			DataMap procCfg = agent.getConfig().getObject("processes").getObject(name);
 			if(procCfg.getString("nodetype").equals(agent.getNodeType())) {
-				int expectedCount = procCfg.getNumber("count").intValue(); 
+				int expectedCount = procCfg.getNumber("count").intValue();
+				int maxPerNode = procCfg.getNumber("maxpernode").intValue(); 
 				boolean hasAllFiles = true;
 				DataList fileList = procCfg.getList("files");
 				for(int i = 0; i < fileList.size(); i++) {
@@ -114,12 +115,17 @@ public class ProcessManager implements Consumer {
 					}
 				}
 				if(hasAllFiles) {
-					for(int i = 0; i < expectedCount; i++) {
-						ProcessInfo pi = this.findProcessInfo(name, i);
-						if(pi == null) {
-							startProcess(name, i, procCfg);
-							changed = true;
+					List<ProcessInfo> localList = listLocalProcessInstances(name);
+					List<ProcessInfo> clusterList = listProcessInstances(name);
+					if(clusterList.size() < expectedCount && localList.size() < maxPerNode) {
+						for(int instance = 0; instance < expectedCount; instance++) {
+							ProcessInfo pi = getProcessInfo(name, instance);
+							if(pi == null) {
+								startProcess(name, instance, procCfg);
+								changed = true;
+							}
 						}
+						
 					}
 				}
 			}
@@ -141,7 +147,9 @@ public class ProcessManager implements Consumer {
 		File dir = new File(instDir);
 		if(dir.exists())
 			deleteWorkDirectory(dir);
-		dir.mkdir();
+		boolean workDirCreated = dir.mkdir();
+		if(workDirCreated == false) 
+			System.out.println("Working directory not created properly");
 		DataList list = config.getList("files");
 		for(int i = 0; i < list.size(); i++) {
 			String filename = list.getString(i);
@@ -168,7 +176,7 @@ public class ProcessManager implements Consumer {
 	    File[] allContents = dir.listFiles();
 	    if (allContents != null) {
 	        for (File file : allContents) {
-	        	boolean ret = deleteWorkDirectory(file);
+	        	deleteWorkDirectory(file);
 	        }
 	    }
 	    return dir.delete();
@@ -220,7 +228,7 @@ public class ProcessManager implements Consumer {
 		}
 	}
 	
-	protected ProcessInfo findProcessInfo(String name, int instance) {
+	protected ProcessInfo getProcessInfo(String name, int instance) {
 		for(ProcessInfo pi: managedProcesses) 
 			if(pi.name.equals(name) && pi.instance == instance)
 				return pi;
@@ -234,6 +242,14 @@ public class ProcessManager implements Consumer {
 				list.add(pi);		
 		return list;
 	}
+	
+	protected List<ProcessInfo> listLocalProcessInstances(String name) {
+		List<ProcessInfo> list = new ArrayList<ProcessInfo>();
+		for(ProcessInfo pi: managedProcesses) 
+			if(pi.name.equals(name) && pi.processHandle != null)
+				list.add(pi);		
+		return list;
+	}	
 	
 	protected void saveLocalProcessInformation() {
 		DataMap savedPI = new DataMap();
