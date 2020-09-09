@@ -38,7 +38,7 @@ public class FileWatcher extends Thread {
 				return FileVisitResult.CONTINUE;
 			}
 		});
-		setName("brFileWather");
+		setName("brFileWatcher");
 		start();
 	}
 	

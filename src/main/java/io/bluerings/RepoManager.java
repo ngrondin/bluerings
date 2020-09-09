@@ -46,9 +46,11 @@ public class RepoManager implements FileWatcherListener, FileReceiverListener {
 	
 	protected void deregisterFile(File file) {
     	String filename = file.getName();
-		System.out.println("Deregistering file " + filename);
-		//TODO add derigistration to firebus
-		localFiles.remove(filename);
+    	if(localFiles.contains(filename)) {
+			System.out.println("Deregistering file " + filename);
+			agent.getFirebus().deregisterStreamProvider("repo_" + filename);
+			localFiles.remove(filename);
+    	}
 	}
 
 	
@@ -72,12 +74,16 @@ public class RepoManager implements FileWatcherListener, FileReceiverListener {
 	}
 
 	public void fileModified(File file) {
-		
+		if(!receivingFiles.contains(file.getName()))
+			registerFile(file);
 	}
 
 	public void fileCreated(File file) {
-		if(!receivingFiles.contains(file.getName()))
+		if(!receivingFiles.contains(file.getName())) {
+			if(file.exists() == false)
+				file = new File("repo/" + file.getName());
 			registerFile(file);
+		}
 	}
 
 	public void fileDeleted(File file) {
