@@ -39,9 +39,11 @@ public class RepoManager implements FileWatcherListener, FileReceiverListener {
 	
 	protected void registerFile(File file) {
     	String filename = file.getName();
-		System.out.println("Registering file " + filename);
-		agent.getFirebus().registerStreamProvider("repo_" + filename, new FileStreamProvider(file), 10);
-		localFiles.add(filename);
+    	if(!localFiles.contains(filename)) {
+			System.out.println("Registering file " + filename);
+			agent.getFirebus().registerStreamProvider("repo_" + filename, new FileStreamProvider(file), 10);
+			localFiles.add(filename);
+    	}
 	}
 	
 	protected void deregisterFile(File file) {
@@ -69,7 +71,7 @@ public class RepoManager implements FileWatcherListener, FileReceiverListener {
 				}
 			}
 		} catch(Exception e) {
-			e.printStackTrace();
+			System.out.println("Cannot get a stream for file " + filename);
 		}
 	}
 

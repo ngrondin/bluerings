@@ -161,6 +161,7 @@ public class ProcessManager extends Thread implements Consumer {
 		File dir = new File(instDir);
 		if(dir.exists())
 			deleteWorkDirectory(dir);
+		try {Thread.sleep(1000);} catch(Exception e) {}
 		boolean workDirCreated = dir.mkdir();
 		if(workDirCreated == true) { 
 			DataList list = config.getList("files");

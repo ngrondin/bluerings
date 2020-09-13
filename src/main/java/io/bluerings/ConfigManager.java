@@ -31,6 +31,7 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 			try {
 				System.out.println("Admin node, using local config");
 				config = new DataMap(new FileInputStream("config.json"));
+				publishConfig();
 			} catch (IOException e1) {
 				System.out.println("No local config, using blank");
 				saveConfig();
@@ -53,6 +54,10 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 		fileWatcher = new FileWatcher(System.getProperty("user.dir"), this);
 		agent.getFirebus().registerServiceProvider("getconfig", this, 10);
 		agent.getFirebus().registerConsumer("config", this, 10);
+	}
+	
+	protected void publishConfig() {
+		agent.getFirebus().publish("config", new Payload(config.toString()));
 	}
 	
 	protected void receivedConfig(Payload payload) throws DataException, IOException {
@@ -82,7 +87,7 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 				if(newConfig != null && !newConfig.toString().equals(config.toString())) {
 					System.out.println("Config updated locally, reloading and publishing it out");
 					config = newConfig;
-					agent.getFirebus().publish("config", new Payload(config.toString()));
+					publishConfig();
 				}
 			} catch(Exception e) {
 				e.printStackTrace();

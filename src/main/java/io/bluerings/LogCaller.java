@@ -13,10 +13,14 @@ import io.firebus.interfaces.StreamProvider;
 public class LogCaller implements StreamProvider, FileReceiverListener {
 	protected Firebus firebus;
 	protected int id;
+	protected int receiving;
+	protected int received;
 
 	public LogCaller() {
 		try {
 			id = 0;
+			receiving = 0;
+			received = 0;
 			firebus = new Firebus("bluerings", "blueringspasswd");
 			firebus.registerStreamProvider("logreceiver", this, 10);
 		} catch(Exception e) {
@@ -37,12 +41,16 @@ public class LogCaller implements StreamProvider, FileReceiverListener {
 				Thread.sleep(1000);
 			}
 			count = 0;
-			while(count < 3) {
+			while(receiving == 0 && received == 0 && count < 3) {
 				System.out.println("Calling");
 				firebus.publish("logcall", new Payload("logreceiver"));
 				count++;
 				Thread.sleep(2000);
-			}			
+			}	
+			while(receiving > 0) {
+				System.out.println("Receiving");
+				Thread.sleep(2000);
+			}
 		} catch(Exception e) {
 			e.printStackTrace();
 		}		
@@ -54,6 +62,7 @@ public class LogCaller implements StreamProvider, FileReceiverListener {
 	
 	public void acceptStream(Payload payload, StreamEndpoint streamEndpoint) throws FunctionErrorException {
 		System.out.println("Receiving a log file");
+		receiving++;
 		String fileName = "log/log" + getNextId() + ".txt";
 		FileReceiverHandler frh = new FileReceiverHandler(fileName, this);
 		streamEndpoint.setHandler(frh);
@@ -68,11 +77,12 @@ public class LogCaller implements StreamProvider, FileReceiverListener {
 	}
 	
 	public void fileReceived(File file) {
-		
+		receiving--;
+		received++;
 	}
 
 	public void fileReceiveFailed(File file) {
-		
+		receiving--;
 	}
 	
 	public void close() {
