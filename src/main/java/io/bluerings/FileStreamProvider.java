@@ -17,7 +17,7 @@ public class FileStreamProvider implements StreamProvider {
 	}
 
 	public void acceptStream(Payload payload, StreamEndpoint streamEndpoint) throws FunctionErrorException {
-		new FilePusher(file, streamEndpoint);
+		new FilePusher(file, streamEndpoint, null);
 	}
 
 	public int getStreamIdleTimeout() {

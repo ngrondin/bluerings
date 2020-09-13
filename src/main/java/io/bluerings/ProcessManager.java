@@ -17,15 +17,17 @@ import io.firebus.utils.DataException;
 import io.firebus.utils.DataList;
 import io.firebus.utils.DataMap;
 
-public class ProcessManager implements Consumer {
+public class ProcessManager extends Thread implements Consumer {
 	protected Agent agent;
 	protected List<ProcessInfo> managedProcesses;
 	protected long lastPublished;
+	protected boolean active;
 	
 	public ProcessManager(Agent a) {
 		agent = a;
 		managedProcesses = new ArrayList<ProcessInfo>();
 		lastPublished = 0;
+		active = true;
 	}
 	
 	public void initiate() throws IOException, DataException {
@@ -56,6 +58,18 @@ public class ProcessManager implements Consumer {
 		publish();
 		if(changed)
 			saveLocalProcessInformation();
+		start();
+	}
+	
+	public void run() {
+		while(active) {
+			try {
+				manageProcesses();
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
+			try {Thread.sleep(5000); } catch(Exception e) {}
+		}		
 	}
 
 	
@@ -148,20 +162,24 @@ public class ProcessManager implements Consumer {
 		if(dir.exists())
 			deleteWorkDirectory(dir);
 		boolean workDirCreated = dir.mkdir();
-		if(workDirCreated == false) 
+		if(workDirCreated == true) { 
+			DataList list = config.getList("files");
+			for(int i = 0; i < list.size(); i++) {
+				String filename = list.getString(i);
+				if(!(new File(instDir + "/" + filename)).exists())
+					Files.createLink(Paths.get(instDir + "/" + filename), Paths.get(rootDir + "/repo/" + filename));
+			}
+			ProcessBuilder pb = new ProcessBuilder(command.split(" "));
+			pb.directory(new File(instDir));
+			Process p = pb.start();
+			ProcessHandle ph = p.toHandle();
+			agent.getLogManager().addStream(ph.pid() + "-s", p.getInputStream());
+			agent.getLogManager().addStream(ph.pid() + "-e", p.getErrorStream());
+			ProcessInfo pi = new ProcessInfo(name, instance, command, agent.getAgentId(), ph);
+			managedProcesses.add(pi);
+		} else {
 			System.out.println("Working directory not created properly");
-		DataList list = config.getList("files");
-		for(int i = 0; i < list.size(); i++) {
-			String filename = list.getString(i);
-			if(!(new File(instDir + "/" + filename)).exists())
-				Files.createLink(Paths.get(instDir + "/" + filename), Paths.get(rootDir + "/repo/" + filename));
 		}
-		ProcessBuilder pb = new ProcessBuilder(command.split(" "));
-		pb.directory(new File(instDir));
-		Process p = pb.start();
-		ProcessHandle ph = p.toHandle();
-		ProcessInfo pi = new ProcessInfo(name, instance, command, agent.getAgentId(), ph);
-		managedProcesses.add(pi);
 	}
 	
 	protected void killProcess(ProcessInfo pi) {
@@ -170,6 +188,8 @@ public class ProcessManager implements Consumer {
 			pi.processHandle.destroyForcibly();
 		}
 		managedProcesses.remove(pi);
+		agent.getLogManager().removeStream(pi.processHandle.pid() + "-s");
+		agent.getLogManager().removeStream(pi.processHandle.pid() + "-e");
 	}
 	
 	boolean deleteWorkDirectory(File dir) {

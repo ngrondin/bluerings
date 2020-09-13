@@ -65,7 +65,7 @@ public class RepoManager implements FileWatcherListener, FileReceiverListener {
 				StreamEndpoint sep = agent.getFirebus().requestStream("repo_" + filename, new Payload(), 10000);
 				if(sep != null) {
 					receivingFiles.add(filename);
-					sep.setHandler(new FileReceiverHandler(filename, this));
+					sep.setHandler(new FileReceiverHandler("repo/" + filename, this));
 				}
 			}
 		} catch(Exception e) {

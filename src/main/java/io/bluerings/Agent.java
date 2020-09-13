@@ -2,12 +2,11 @@ package io.bluerings;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+//import java.util.logging.FileHandler;
+//import java.util.logging.Level;
+//import java.util.logging.Logger;
 
 import io.firebus.Firebus;
-import io.firebus.logging.FirebusSimpleFormatter;
 import io.firebus.utils.DataMap;
 
 public class Agent extends Thread {
@@ -17,6 +16,7 @@ public class Agent extends Thread {
 	protected RepoManager repoManager;
 	protected ProcessManager processManager;
 	protected ConfigManager configManager;
+	protected LogManager logManager;
 	protected boolean active;
 	
 	protected static int OS_WINDOWS = 1;
@@ -30,37 +30,22 @@ public class Agent extends Thread {
 		if(fbp != 0)
 			System.out.println("Firebus port set to " + fbp);
 		try {
+			active = true;
 			firebus = new Firebus(fbp, "bluerings", "blueringspasswd");
 			repoManager = new RepoManager(this);
 			processManager = new ProcessManager(this);
 			configManager = new ConfigManager(this);
-			active = true;
-			start();
+			logManager = new LogManager(this);
+			initiate();
+			logManager.initiate();
+			configManager.initiate();
+			repoManager.initiate();
+			processManager.initiate();
 		} catch(Exception e) {
 			
 		}
 	}
 	
-	public void run() {
-		try {
-			initiate();
-			configManager.initiate();
-			repoManager.initiate();
-			processManager.initiate();
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-		while(active) {
-			try {
-				processManager.manageProcesses();				
-			} catch(Exception e) {
-				e.printStackTrace();
-			}
-			try {Thread.sleep(5000); } catch(Exception e) {}
-		}
-	}
-
-
 	public void initiate() throws UnknownHostException {
 		InetAddress inetAddress = InetAddress.getLocalHost();
 		agentId = inetAddress.getHostName();
@@ -90,28 +75,13 @@ public class Agent extends Thread {
 		return repoManager;
 	}
 	
+	public LogManager getLogManager() {
+		return logManager;
+	}
 	
 
 	
 	public static void main(String[] args) {
-		Logger.getLogger("").removeHandler(Logger.getLogger("").getHandlers()[0]);
-		try
-		{
-			FileHandler fh = new FileHandler("Agent.log");
-			fh.setFormatter(new FirebusSimpleFormatter());
-			fh.setLevel(Level.FINEST);
-			Logger logger = null;
-			logger = Logger.getLogger("io.bluerings");
-			logger.addHandler(fh);
-			logger.setLevel(Level.FINEST);
-			logger = Logger.getLogger("io.firebus");
-			logger.addHandler(fh);
-			logger.setLevel(Level.FINE);
-		}
-		catch(Exception e)
-		{
-			e.printStackTrace();
-		}
 		String nodeType = null;
 		int fbPort = 0;
 		String ka = null;
