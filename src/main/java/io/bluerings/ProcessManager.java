@@ -73,7 +73,7 @@ public class ProcessManager extends Thread implements Consumer {
 	}
 
 	
-	protected void manageProcesses() throws IOException {
+	protected synchronized void manageProcesses() throws IOException {
 		boolean changed = false; 
 
 		//Killing dead, process with modified configs or over processes 
@@ -223,26 +223,28 @@ public class ProcessManager extends Thread implements Consumer {
 
 	public void consume(Payload payload) {
 		try {
-			DataMap pub = new DataMap(payload.getString());
-			String node = pub.getString("node");
-			if(!node.equals(agent.getAgentId())) {
-				for(int i = 0; i < managedProcesses.size(); i++) {
-					ProcessInfo pi = managedProcesses.get(i);
-					if(pi.nodeId.equals(node)) {
-						managedProcesses.remove(i);
-						i--;
+			synchronized(this) {
+				DataMap pub = new DataMap(payload.getString());
+				String node = pub.getString("node");
+				if(!node.equals(agent.getAgentId())) {
+					for(int i = 0; i < managedProcesses.size(); i++) {
+						ProcessInfo pi = managedProcesses.get(i);
+						if(pi.nodeId.equals(node)) {
+							managedProcesses.remove(i);
+							i--;
+						}
 					}
+					
+					DataList list = pub.getList("processes");
+					for(int i = 0; i < list.size(); i++) {
+						DataMap proc = list.getObject(i);
+						managedProcesses.add(new ProcessInfo(proc.getString("name"), proc.getNumber("instance").intValue(), proc.getString("command"), node, null));
+					}
+					
+					saveClusterProcessInformation();
+					if(lastPublished < System.currentTimeMillis() - 10000)
+						publish();
 				}
-				
-				DataList list = pub.getList("processes");
-				for(int i = 0; i < list.size(); i++) {
-					DataMap proc = list.getObject(i);
-					managedProcesses.add(new ProcessInfo(proc.getString("name"), proc.getNumber("instance").intValue(), proc.getString("command"), node, null));
-				}
-				
-				saveClusterProcessInformation();
-				if(lastPublished < System.currentTimeMillis() - 10000)
-					publish();
 			}
 		} catch(Exception e) {
 			e.printStackTrace();
