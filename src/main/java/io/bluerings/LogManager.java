@@ -40,17 +40,15 @@ public class LogManager extends Thread implements Consumer {
 	
 	public void addStream(String id, InputStream is) {
 		streams.put(id, is);
-		buffers.put(id, ByteBuffer.wrap(new byte[10485766]));
+		buffers.put(id, ByteBuffer.wrap(new byte[1048576]));
 	}
 	
 	public void removeStream(String id) {
 		try {
 			ByteBuffer bb = buffers.get(id);
-			if(bb != null) { 
-				writeBufferToFile(bb);
-				buffers.remove(id);
-				streams.remove(id);
-			}
+			writeBufferToFile(bb);
+			buffers.remove(id);
+			streams.remove(id);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
@@ -83,29 +81,31 @@ public class LogManager extends Thread implements Consumer {
 	}
 	
 	protected void writeBufferToFile(ByteBuffer bb)  {
-		try {
-			synchronized(fileLock) {
-				byte[] bytes = bb.array();
-				int last = bb.position();
-				int pos = last;
-				for(;pos > 0 && bytes[pos] != 10; pos--);
-				File file = new File("log/log.txt");
-				if(file.length() > 5242800) {
-					file.renameTo(new File("log/log" + System.currentTimeMillis() + ".txt"));
-					file = new File("log/log.txt");
-					file.createNewFile();
+		if(bb != null) { 
+			try {
+				synchronized(fileLock) {
+					byte[] bytes = bb.array();
+					int last = bb.position();
+					int pos = last;
+					for(;pos > 0 && bytes[pos] != 10; pos--);
+					File file = new File("log/log.txt");
+					if(file.length() > 5242800) {
+						file.renameTo(new File("log/log" + System.currentTimeMillis() + ".txt"));
+						file = new File("log/log.txt");
+						file.createNewFile();
+					}
+					if(pos > 0) {
+						FileOutputStream fos = new FileOutputStream("log/log.txt", true);
+						fos.write(bytes, 0, pos);
+						fos.close();
+						bb.position(0);
+						for(int i = pos; i < last; i++)
+							bb.put(bytes[i]);
+					}			
 				}
-				if(pos > 0) {
-					FileOutputStream fos = new FileOutputStream("log/log.txt", true);
-					fos.write(bytes, 0, pos);
-					fos.close();
-					bb.position(0);
-					for(int i = pos; i < last; i++)
-						bb.put(bytes[i]);
-				}			
+			} catch(Exception e) {
+				e.printStackTrace();
 			}
-		} catch(Exception e) {
-			e.printStackTrace();
 		}
 	}
 
