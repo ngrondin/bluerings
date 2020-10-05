@@ -97,7 +97,7 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 	}
 
 	public void fileCreated(File file) {
-		
+		fileModified(file);
 	}
 
 	public void fileDeleted(File file) {

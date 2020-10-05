@@ -32,12 +32,13 @@ public class FileWatcher extends Thread {
 		listener = l;
 		watcher = FileSystems.getDefault().newWatchService();
 		Path start = Paths.get(p);
-		Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
+		start.register(watcher, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
+		/*Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
 			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
 				dir.register(watcher, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
 				return FileVisitResult.CONTINUE;
 			}
-		});
+		});*/
 		setName("brFileWatcher");
 		start();
 	}
