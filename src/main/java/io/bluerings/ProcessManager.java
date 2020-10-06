@@ -31,34 +31,36 @@ public class ProcessManager extends Thread implements Consumer {
 	}
 	
 	public void initiate() throws IOException, DataException {
-		boolean changed = false; 
-		File dir = new File("work");
-		if(!dir.exists())
-			dir.mkdir();
-		File file = new File("work/localprocesses.json");
-		if(file.exists()) {
-			DataMap savedPI = new DataMap(new FileInputStream("work/localprocesses.json"));
-			DataList list = savedPI.getList("processes");
-			for(int i = 0; i < list.size(); i++) {
-				DataMap spi = list.getObject(i);
-				String name = spi.getString("name");
-				int instance = spi.getNumber("instance").intValue();
-				String cmd = spi.getString("command");
-				String node = agent.getAgentId();
-				Optional<ProcessHandle> oph = ProcessHandle.of(spi.getNumber("pid").longValue());
-				ProcessHandle ph = null;
-				if(oph.isPresent()) {
-					ph = oph.get();
-					ProcessInfo pi = new ProcessInfo(name, instance, cmd, node, ph);
-					managedProcesses.add(pi);
+		agent.getFirebus().registerConsumer("processes", this, 10);
+		if(!agent.getNodeType().equals("admin")) {
+			boolean changed = false; 
+			File dir = new File("work");
+			if(!dir.exists())
+				dir.mkdir();
+			File file = new File("work/localprocesses.json");
+			if(file.exists()) {
+				DataMap savedPI = new DataMap(new FileInputStream("work/localprocesses.json"));
+				DataList list = savedPI.getList("processes");
+				for(int i = 0; i < list.size(); i++) {
+					DataMap spi = list.getObject(i);
+					String name = spi.getString("name");
+					int instance = spi.getNumber("instance").intValue();
+					String cmd = spi.getString("command");
+					String node = agent.getAgentId();
+					Optional<ProcessHandle> oph = ProcessHandle.of(spi.getNumber("pid").longValue());
+					ProcessHandle ph = null;
+					if(oph.isPresent()) {
+						ph = oph.get();
+						ProcessInfo pi = new ProcessInfo(name, instance, cmd, node, ph);
+						managedProcesses.add(pi);
+					}
 				}
 			}
+			publish();
+			if(changed)
+				saveLocalProcessInformation();
+			start();
 		}
-		agent.getFirebus().registerConsumer("processes", this, 10);
-		publish();
-		if(changed)
-			saveLocalProcessInformation();
-		start();
 	}
 	
 	public void run() {
