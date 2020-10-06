@@ -57,13 +57,16 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 	}
 	
 	protected void publishConfig() {
-		agent.getFirebus().publish("config", new Payload(config.toString()));
+		System.out.println("Publishing config out");
+		Payload payload = new Payload(config.toString());
+		payload.metadata.put("from", agent.getAgentId());
+		agent.getFirebus().publish("config", payload);
 	}
 	
 	protected void receivedConfig(Payload payload) throws DataException, IOException {
 		DataMap newConfig = new DataMap(payload.getString());
 		if(config == null || (config != null && !newConfig.toString().equals(config.toString()))) {
-			System.out.println("Received a config, saving it locally");
+			System.out.println("Received a config from " + payload.metadata.get("from"));
 			config = newConfig;
 			saveConfig();
 		}
@@ -82,10 +85,12 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 			DataMap newConfig = null;
 			try {
 				newConfig = new DataMap(new FileInputStream(file));
-			} catch(Exception e) {}
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
 			try {
 				if(newConfig != null && !newConfig.toString().equals(config.toString())) {
-					System.out.println("Config updated locally, reloading and publishing it out");
+					System.out.println("Config updated locally, reloading it");
 					config = newConfig;
 					publishConfig();
 				}
@@ -105,12 +110,15 @@ public class ConfigManager implements FileWatcherListener, ServiceProvider, Cons
 	}
 
 	public Payload service(Payload payload) throws FunctionErrorException {
-		return new Payload(config.toString());
+		Payload resp = new Payload(config.toString());
+		resp.metadata.put("from", agent.getAgentId());
+		return resp;
 	}
 
 	public void consume(Payload payload) {
 		try {
-			receivedConfig(payload);
+			if(!agent.getNodeType().equals("admin"))
+				receivedConfig(payload);
 		} catch(Exception e) {
 			e.printStackTrace();
 		}

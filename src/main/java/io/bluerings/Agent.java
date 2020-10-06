@@ -33,14 +33,18 @@ public class Agent extends Thread {
 			active = true;
 			firebus = new Firebus(fbp, "bluerings", "blueringspasswd");
 			repoManager = new RepoManager(this);
-			processManager = new ProcessManager(this);
 			configManager = new ConfigManager(this);
-			logManager = new LogManager(this);
+			if(!nodeType.equals("admin")) {
+				processManager = new ProcessManager(this);
+				logManager = new LogManager(this);
+			}
 			initiate();
-			logManager.initiate();
-			configManager.initiate();
 			repoManager.initiate();
-			processManager.initiate();
+			configManager.initiate();
+			if(!nodeType.equals("admin")) {
+				processManager.initiate();
+				logManager.initiate();
+			}
 		} catch(Exception e) {
 			
 		}
@@ -49,6 +53,7 @@ public class Agent extends Thread {
 	public void initiate() throws UnknownHostException {
 		InetAddress inetAddress = InetAddress.getLocalHost();
 		agentId = inetAddress.getHostName();
+		System.out.println("Agent id is '" + agentId + "'");
 	}
 
 	public void addKnownAddress(String a, int p) {
