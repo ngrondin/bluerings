@@ -1,11 +1,7 @@
 package io.bluerings;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.logging.ConsoleHandler;
-//import java.util.logging.FileHandler;
-//import java.util.logging.Level;
-//import java.util.logging.Logger;
 import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
@@ -127,8 +123,11 @@ public class Agent extends Thread {
 		}
 		Agent agent = new Agent(nodeType, fbPort);
 		if(ka != null) {
-			String[] parts = ka.split(":");
-			agent.addKnownAddress(parts[0], Integer.parseInt(parts[1]));
+			String[] parts = ka.split(",");
+			for(int i = 0; i < parts.length; i++) {
+				String[] subparts = parts[i].split(":");
+				agent.addKnownAddress(subparts[0], Integer.parseInt(subparts[1]));
+			}
 		}
 		agent.initiate();
 		
